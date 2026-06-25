@@ -82,5 +82,5 @@ KMS暗号化は、情報区分「`極秘・取り扱い厳重注意`」時のみ
 
 
 ## s3filesの設定に関して
-* アクセスポイントについては、[s3filesをECSにマウントする](/deploy/manual/efs-mount-to-ecs.html#アクセスポイント){: target="_blank"}を参照してください。  
+* [s3filesをECSにマウントする](/deploy/manual/s3files-mount-to-ecs.html){: target="_blank"}を参照してください。  
   
