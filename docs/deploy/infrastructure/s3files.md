@@ -81,6 +81,6 @@ KMS暗号化は、情報区分「`極秘・取り扱い厳重注意`」時のみ
 | AccessPointEnabled | true |
 
 
-## s3filesの設定に関して
+## タスク定義のの設定に関して
 * [s3filesをECSにマウントする](/deploy/manual/s3files-mount-to-ecs.html){: target="_blank"}を参照してください。  
   
