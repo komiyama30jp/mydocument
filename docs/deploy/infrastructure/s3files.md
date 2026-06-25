@@ -82,5 +82,5 @@ KMS暗号化は、情報区分「`極秘・取り扱い厳重注意`」時のみ
 
 
 ## ECSにマウントする
-* [s3filesをECSにマウントする](../../manual/s3files-mount-to-ecs.html){: target="_blank"}を参照してください。  
+* [s3filesをECSにマウントする](../manual/s3files-mount-to-ecs.html){: target="_blank"}を参照してください。  
   
