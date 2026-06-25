@@ -24,7 +24,7 @@ nav_order: 7
 
 ## s3filesを作成する
 
-[テンプレートを利用](/deploy/infrastructure/s3files.html)して、s3filesを作成します。  
+[テンプレートを利用](../../infrastructure/s3files.html)して、s3filesを作成します。  
 
 作成したs3filesより、ファイルシステムIDとアクセスポイントIDを控えておいてください。  
 後ほどECSのタスク定義で利用します。
