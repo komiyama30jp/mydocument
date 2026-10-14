@@ -73,7 +73,7 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
 ### 1-4．タスク定義を更新する。  
 　1. コンソールを開き「新しいリビジョンの作成」を押下します。 
 
-　1. オペレーションシステム/アーキテクチャを「Linux/Arm64」へ変更します。 
+　2. オペレーションシステム/アーキテクチャを「Linux/Arm64」へ変更します。 
     ![task](./files/arm64_1.svg)  
 
 ### 1-5．サービスを更新する。  
@@ -86,12 +86,19 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
 
 ### 2-1.  ymlファイルを更新する。 
 ```yml1
-#Buildx Builderをセットアップするために下記を追加する。
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+#ARM64のエミュレータを使用するために下記を追加する。
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
 ```  
 
+
 ```yml2
+#Buildx Builderをセットアップするために下記を追加する。
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+```  
+
+```yml3
 # platforms: linux/arm64を追加する。
       - name: build and push docker image to ecr
         id: build-image
@@ -105,7 +112,6 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
           platforms: linux/arm64
           tags: ${{ env.REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           push: true
-
 ```  
 ### 2-2.  タスク定義を更新する。
 
