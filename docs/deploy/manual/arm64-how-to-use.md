@@ -122,6 +122,7 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
     "operatingSystemFamily": "LINUX"
   }
 ```  
+[デベロッパーガイド参照](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/ecs-arm-specifying.html){:target="_blank"}
 
 
 
