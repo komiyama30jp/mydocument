@@ -1,0 +1,652 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Serverless-job construction.
+###################################
+# --------------------------------#
+# Metadata
+# --------------------------------#
+###################################
+Metadata:
+  AWS::CloudFormation::Interface:
+    # パラメータの並び順
+    ParameterGroups:
+      - Label:
+          default: Project Configuration
+        Parameters:
+          - SystemId
+          - EnvType
+          - BillingID
+          - SecurityGroupIds
+          
+      - Label:
+          default: Job Configuration
+        Parameters:
+          - JobNameSuffix
+          - ClusterNameSuffix
+          - S3BucketName
+
+      - Label:
+          default: Job1 Configuration
+        Parameters:
+          - JsonParams1
+          - ScheduleExpressionParam1
+      - Label:
+          default: Job2 Configuration
+        Parameters:
+          - JsonParams2
+          - ScheduleExpressionParam2
+      - Label:
+          default: Job3 Configuration
+        Parameters:
+          - JsonParams3
+          - ScheduleExpressionParam3
+      
+      - Label:
+          default: Logs Configuration
+        Parameters:
+          - LogsRetentionInDays
+      
+      - Label:
+          default: KMS Configuration
+        Parameters:
+          - KMSKeyArn
+
+###################################
+#---------------------------------#
+# Mappings Section
+#---------------------------------#
+###################################
+Mappings:
+  EnvType:
+    t:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    k:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    v:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    e:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    i:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    s:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    m:
+      EnvDiv: prd
+      VpcId: vpc-0f45a573cbab26100
+      SubnetIds: 
+        - subnet-03d6798e8fe508470
+        - subnet-09cea85b4f2cfec8e
+        - subnet-0cc5f30d668513fb2
+    p:
+      EnvDiv: prd
+      VpcId: vpc-0f45a573cbab26100
+      SubnetIds: 
+        - subnet-03d6798e8fe508470
+        - subnet-09cea85b4f2cfec8e
+        - subnet-0cc5f30d668513fb2
+    
+###################################
+#---------------------------------#
+# Parameters Section
+#---------------------------------#
+###################################            
+Parameters:
+  SystemId:
+    Type: String
+    Description: Enter the system id.
+    MinLength: 6
+    MaxLength: 6
+  EnvType:
+    Type: String
+    Description: Select the environment.
+    AllowedValues:
+      - t
+      - k
+      - v
+      - e
+      - i
+      - s
+      - m
+      - p
+  BillingID:
+    Type: String
+    Description: Enter the system BillingID.
+    MinLength: 1
+
+  # sercurity group
+  SecurityGroupIds:
+    Description: Select the Security Group ID for resources
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    MinLength: 1
+
+  # job
+  JobNameSuffix:
+    Type: String
+    Description: Enter the job name
+    Default: job
+    MinLength: 1
+  ClusterNameSuffix:
+    Type: String
+    Description: Enter an already existing ecs cluster.
+    Default: webapp
+    MinLength: 1
+  S3BucketName:
+    Type: String
+    Description: Enter the name of an already existing S3 bucket(ex. s3-t-didcfw-fsv-01)
+    MinLength: 1
+
+  JsonParams1:
+    Type: String
+    Description: Input your job param(json) to run for step functions.
+    Default: '{"CommandParams": ["--spring.batch.job.name=purchaseOrderOutputJob", "orderDate=2024-01-01"]}'
+  ScheduleExpressionParam1:
+    Type: String
+    Description: Enter the cron expression(Asia/Tokyo).
+    Default: cron(0 0 * * ? *)
+    MinLength: 1
+  JsonParams2:
+    Type: String
+    Description: Input your job param(json) to run for step functions.
+    Default: '{"CommandParams": ["--spring.batch.job.name=dummyBinningJob", "orderDate=2024-01-01"]}'
+  ScheduleExpressionParam2:
+    Type: String
+    Description: Enter the cron expression(Asia/Tokyo).
+    Default: cron(10 0 * * ? *)
+    MinLength: 1
+  JsonParams3:
+    Type: String
+    Description: Input your job param(json) to run for step functions.
+    Default: '{"CommandParams": ["--spring.batch.job.names=dummyShippingJob"]}'
+  ScheduleExpressionParam3:
+    Type: String
+    Description: Enter the cron expression(Asia/Tokyo).
+    Default: cron(20 0 * * ? *)
+    MinLength: 1
+  
+  # logs
+  LogsRetentionInDays:
+    Type: Number
+    Description: Enter your cloudwatch logs retention in days.
+    Default: 30
+  
+  # kms key
+  KMSKeyArn:
+    Type: String
+    Description: Note! For accounts located in the Security Data OU, please enter the arn of your customer key arn.
+    AllowedPattern: ^(arn:aws:kms:.*:(\d{12})?:(key|alias)/.+|)\Z
+
+
+###################################
+#---------------------------------#
+# Conditions Section
+#---------------------------------#
+###################################   
+Conditions:
+  EncryptionByKMS: 
+    !Not [!Equals [ !Ref KMSKeyArn, '']] 
+
+###################################
+#---------------------------------#
+# Resourcecs Section
+#---------------------------------#
+###################################          
+Resources:
+  # ---------------------------------
+  # StepFunctions
+  # ---------------------------------
+  StateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub StateMachine-${EnvType}-${SystemId}-${JobNameSuffix}
+      RoleArn: !GetAtt StateMachineRole.Arn
+      Definition:
+        Comment: Output DB Data to s3 using ecs task
+        StartAt: ECSRunTask
+        States:
+          ECSRunTask:
+            Type: Task
+            Resource: arn:aws:states:::ecs:runTask.waitForTaskToken
+            Parameters:
+              LaunchType: FARGATE
+              Cluster: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/ecs-cluster-${EnvType}-${SystemId}-${ClusterNameSuffix}
+              TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/ecs-task-${EnvType}-${SystemId}-${JobNameSuffix}
+              NetworkConfiguration:
+                AwsvpcConfiguration:
+                  SecurityGroups: !Ref SecurityGroupIds
+                  Subnets: !FindInMap [EnvType, !Ref EnvType, SubnetIds]
+              Overrides:
+                ContainerOverrides:
+                - Name: !Ref JobNameSuffix
+                  Command.$: $.CommandParams
+                  Environment:
+                  - Name: TASKTOKEN
+                    Value.$: $$.Task.Token
+            End: true
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  StateMachineSendTaskResult:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub StateMachine-${EnvType}-${SystemId}-sendtaskresult
+      RoleArn: !GetAtt StateMachineSendTaskResultRole.Arn
+      Definition:
+        Comment: SendTask Result(Step Functions waitfortasktoken) to StepFunction instead of ecs application.
+        StartAt: Choice
+        States:
+          Choice:
+            Type: Choice
+            Choices:
+              - Not:
+                  Variable: "$.detail.containers[0].exitCode"
+                  NumericEquals: 0
+                Next: SendTaskFailure
+            Default: SendTaskSuccess
+          SendTaskFailure:
+            Type: Task
+            Parameters:
+              TaskToken.$: $.detail.overrides.containerOverrides[0].environment[0].value
+              Cause: The job ended with exception(exitcode not equals 0). Please check the log.
+            Resource: arn:aws:states:::aws-sdk:sfn:sendTaskFailure
+            End: true
+          SendTaskSuccess:
+            Type: Task
+            Parameters:
+              Output: '{"message":"success"}'
+              TaskToken.$: $.detail.overrides.containerOverrides[0].environment[0].value
+            Resource: arn:aws:states:::aws-sdk:sfn:sendTaskSuccess
+            End: true
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  # ---------------------------------
+  # EventBridge Rule(Normal)
+  # ---------------------------------
+  EventBridgeRuleSendTaskResult:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ebrule-${EnvType}-${SystemId}-sendtaskresult
+      EventPattern: |
+        {
+          "source": ["aws.ecs"],
+          "detail-type": ["ECS Task State Change"],
+          "detail": {
+            "lastStatus": ["STOPPED"],
+            "overrides": {
+              "containerOverrides": {
+                "environment": {
+                  "name": ["TASKTOKEN"]
+                }
+              }
+            }
+          }
+        }
+      State: ENABLED
+      EventBusName: default
+      Targets:
+        - Id: Id69c254e2-191d-4cda-84ca-8581252639db
+          Arn: !GetAtt StateMachineSendTaskResult.Arn
+          RoleArn: !GetAtt MyEventBridgeInvokeStepFunctionsSendTaskResultRole.Arn
+  # ---------------------------------
+  # EventBridge Scheduler
+  # ---------------------------------
+  StateMachineEventBridgeScheduler1:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub ebschdlr-${EnvType}-${SystemId}-${JobNameSuffix}-purchaseOrderOutput
+      Description: !Sub for statemachine(${JobNameSuffix}) EventBridge Scheduler
+      ScheduleExpression: !Ref ScheduleExpressionParam1
+      ScheduleExpressionTimezone: Asia/Tokyo
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt StateMachine.Arn
+        RoleArn: !GetAtt MyEventBridgeInvokeStepFunctionsRole.Arn
+        Input: !Ref JsonParams1
+  StateMachineEventBridgeScheduler2:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub ebschdlr-${EnvType}-${SystemId}-${JobNameSuffix}-dummyBinning
+      Description: !Sub for statemachine(${JobNameSuffix}) EventBridge Scheduler
+      ScheduleExpression: !Ref ScheduleExpressionParam2
+      ScheduleExpressionTimezone: Asia/Tokyo
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt StateMachine.Arn
+        RoleArn: !GetAtt MyEventBridgeInvokeStepFunctionsRole.Arn
+        Input: !Ref JsonParams2
+  StateMachineEventBridgeScheduler3:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub ebschdlr-${EnvType}-${SystemId}-${JobNameSuffix}-dummyShipping
+      Description: !Sub for statemachine(${JobNameSuffix}) EventBridge Scheduler
+      ScheduleExpression: !Ref ScheduleExpressionParam3
+      ScheduleExpressionTimezone: Asia/Tokyo
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt StateMachine.Arn
+        RoleArn: !GetAtt MyEventBridgeInvokeStepFunctionsRole.Arn
+        Input: !Ref JsonParams3
+
+  # ---------------------------------
+  # CloudWatchLogs
+  # ---------------------------------
+  JobECSLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      KmsKeyId:
+        !If
+        - EncryptionByKMS
+        - !Ref KMSKeyArn
+        - !Ref AWS::NoValue
+      LogGroupName: !Sub /ecs/ecs-task-${EnvType}-${SystemId}-${JobNameSuffix}
+      RetentionInDays: !Ref LogsRetentionInDays
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  # ---------------------------------
+  # ECS TaskDefinition
+  # ---------------------------------
+  # only initial construction
+  JobTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Image: 767398036381.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-pri-t-didcfw-sample-job:latest
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: 
+              awslogs-group: !Sub /ecs/ecs-task-${EnvType}-${SystemId}-${JobNameSuffix}
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref JobNameSuffix
+          Name: !Ref JobNameSuffix
+      Cpu: 1024
+      Memory: 2048
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Family: !Sub ecs-task-${EnvType}-${SystemId}-${JobNameSuffix}
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  # ---------------------------------
+  # IAM Role
+  # ---------------------------------
+  MyEventBridgeInvokeStepFunctionsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - scheduler.amazonaws.com
+            Action:
+              - sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: EventBridgePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref StateMachine
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  MyEventBridgeInvokeStepFunctionsSendTaskResultRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub rol-${EnvType}-${SystemId}-states-job-sendtaskresult
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: EventBridgePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref StateMachineSendTaskResult
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  StateMachineRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub rol-${EnvType}-${SystemId}-states-${JobNameSuffix}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: StateMachinePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: 
+                  - !Sub arn:aws:s3:::${S3BucketName}*
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  - !GetAtt TaskExecutionRole.Arn
+                  - !GetAtt TaskRole.Arn
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  StateMachineSendTaskResultRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub rol-${EnvType}-${SystemId}-states-sendtaskresult
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: StateMachinePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:SendTask*
+                Resource: '*'
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub rol-${EnvType}-${SystemId}-taskexecute-${JobNameSuffix}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy   
+      Policies:
+        - PolicyName: AllowStartedContainer
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - ssm:GetParameter*
+                  - secretsmanager:GetSecretValue
+                  - kms:Decrypt
+                  - s3:GetObject
+                Resource: '*'
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub rol-${EnvType}-${SystemId}-task-${JobNameSuffix}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowRunningContainer
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - ssmmessages:CreateControlChannel
+                  - ssmmessages:CreateDataChannel
+                  - ssmmessages:OpenControlChannel
+                  - ssmmessages:OpenDataChannel
+                  - states:SendTaskSuccess
+                  - states:SendTaskFailure
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:List*
+                  - s3:*Object
+                Resource: 
+                  - !Sub arn:aws:s3:::${S3BucketName}*
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+
+###################################
+#---------------------------------#
+# Outputs Section
+#---------------------------------#
+###################################
