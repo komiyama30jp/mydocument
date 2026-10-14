@@ -44,6 +44,7 @@ docker pull --platform linux/arm64 533994313413.dkr.ecr.ap-northeast-1.amazonaws
 
 {: .tip}  
 **引数**に、[--platform linux/arm64]を指定しPullする。   
+-- platformの引数はDockerDesktopのバージョン4.19.0以降でサポートされています。
 
 <br>
 
@@ -58,7 +59,6 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
 ```  
 {: .tip}  
 **引数**に、[--platform linux/arm64]を指定しPullする。  
--- platformの引数はDockerDesktopバージョン19.0.3以降でサポートされています。
 <br>
 
 
