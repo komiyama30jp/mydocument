@@ -44,7 +44,7 @@ docker pull --platform linux/arm64 533994313413.dkr.ecr.ap-northeast-1.amazonaws
 
 {: .tip}  
 **引数**に、[--platform linux/arm64]を指定しPullする。  
--- platformの引数はDockerDesktopのバージョン4.19.0以降でサポートされています。  
+-- platformの引数はDockerDesktopのバージョン4.19.0以降でサポートされています。
 
 <br>
 
@@ -59,15 +59,13 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
 ```  
 {: .tip}  
 **引数**に、[--platform linux/arm64]を指定しビルドする。  
+
 <br>
-
-
 
 ### 1-3．BuildしたARM64イメージをPushする  
 
 [アプリのECRにログイン](../manual/deploy-browser.html#1-2イメージをpushする){:target="_blank"}し
 ビルドしたARM64イメージをPushする。
-
 
 
 ### 1-4．タスク定義を更新する。  
@@ -77,7 +75,6 @@ docker build  --provenance=false --platform linux/arm64  -t 908027375710.dkr.ecr
     ![task](./files/arm64_1.svg)  
 
 ### 1-5．サービスを更新する。  
-
 　1. タスク定義のリビジョンを変更し、サービスを更新します。
 
 <br>
