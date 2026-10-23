@@ -1,0 +1,522 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: for AI Gateway Infrastracture
+###################################
+# --------------------------------#
+# Metadata
+# --------------------------------#
+###################################
+Metadata:
+  AWS::CloudFormation::Interface:
+    # パラメータの並び順
+    ParameterGroups:
+      - Label:
+          default: Project Configuration
+        Parameters:
+          - SystemId
+          - EnvType
+          - BillingID
+          - SecurityGroupIds
+      - Label:
+          default: ELB Configuration
+        Parameters:
+          - ACM
+          - HealthCheckPath
+          - Stickiness
+          - IdleTimeoutSeconds
+      - Label:
+          default: ECS Configuration
+        Parameters:
+          - ServiceNameSuffix
+          - ECSClusterArn
+          - ContainerInsights
+          - ECSContainerPort
+          - ECSTaskCPUUnit
+          - ECSTaskMemory
+          - ECSDesiredCount
+      - Label:
+          default: Logs Configuration
+        Parameters:
+          - LogsRetentionInDays
+      - Label:
+          default: KMS Configuration
+        Parameters:
+          - KMSKeyArn
+
+###################################
+#---------------------------------#
+# Mappings Section
+#---------------------------------#
+###################################
+Mappings:
+  EnvType:
+    t:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    k:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    v:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    e:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    i:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    s:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    m:
+      EnvDiv: prd
+      VpcId: vpc-0f45a573cbab26100
+      SubnetIds: 
+        - subnet-03d6798e8fe508470
+        - subnet-09cea85b4f2cfec8e
+        - subnet-0cc5f30d668513fb2
+    p:
+      EnvDiv: prd
+      VpcId: vpc-0f45a573cbab26100
+      SubnetIds: 
+        - subnet-03d6798e8fe508470
+        - subnet-09cea85b4f2cfec8e
+        - subnet-0cc5f30d668513fb2
+
+###################################
+#---------------------------------#
+# Parameters Section
+#---------------------------------#
+###################################
+Parameters:
+  SystemId:
+    Type: String
+    Description: Enter the system id.
+    MinLength: 6
+    MaxLength: 6
+  EnvType:
+    Type: String
+    Description: Select the environment.
+    AllowedValues:
+      - t
+      - k
+      - v
+      - e
+      - i
+      - s
+      - m
+      - p
+  BillingID:
+    Type: String
+    Description: Enter the system billing id.
+
+  # sercurity group
+  SecurityGroupIds:
+    Description: Select the Security Group IDs for resources
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    MinLength: 1
+
+  # ACM(certificate)
+  ACM:
+    Type: String
+    Description: Enter your elb domain certificate arn
+    AllowedPattern: arn:aws:acm:[\w+=/,.@-]*:[0-9]+:certificate/(.*)
+
+  # healthcheck
+  HealthCheckPath:
+    Description: Enter the path respond to health checks from ALB.
+    Type: String
+    Default: /actuator/health
+
+  # Sticky Session
+  Stickiness:
+    Description: Select the ALB Stickiness to enable.
+    Type: String
+    Default: true
+
+  # idletimeout
+  IdleTimeoutSeconds:
+    Description: 'Enter the ALB idle timeout seconds. (default: 360)'
+    Type: String
+    Default: 360
+
+  # servicename
+  ServiceNameSuffix:
+    Description: Enter the service name.
+    Type: String
+    Default: ai-gateway
+  
+  # ECS Cluster Arn
+  ECSClusterArn:
+    Type: String
+    Description: Enter the ecs cluster arn
+    AllowedPattern: ^(arn:aws:ecs:[\w+=/,.@-]*:[0-9]+:cluster/(.*)|)\Z
+
+  # Cluster ContainerInsights
+  ContainerInsights:
+    Type: String
+    Description: Select the ContainerInsights enabled or disabled
+    Default: enabled
+    AllowedValues:
+      - enhanced
+      - enabled
+      - disabled
+
+  ECSContainerPort:
+    Type: String
+    Description: Enter the container port
+    Default: '8080'
+  ECSTaskCPUUnit:
+    AllowedValues:
+      - 512
+      - 1024
+      - 2048
+      - 4096
+    Type: String
+    Default: 1024
+  ECSTaskMemory:
+    AllowedValues:
+      - 1024
+      - 2048
+      - 4096
+      - 8192
+    Type: String
+    Default: 2048
+  ECSDesiredCount:
+    Type: String
+    Default: 1
+  
+  # logs
+  LogsRetentionInDays:
+    Type: Number
+    Description: Enter your cloudwatch logs retention in days.
+    Default: 90
+
+  # alias kms key
+  KMSKeyArn:
+    Type: String
+    Description: Note! For accounts located in the Security Data OU, please enter the arn of your customer key arn.
+    AllowedPattern: ^(arn:aws:kms:.*:(\d{12})?:(key|alias)/.+|)\Z
+    MinLength: 0
+  
+###################################
+#---------------------------------#
+# Conditions Section
+#---------------------------------#
+###################################   
+Conditions:
+  EncryptionByKMS: 
+    !Not [!Equals [ !Ref KMSKeyArn, '']] 
+  CreateECSCluster:
+    !Equals [ !Ref ECSClusterArn, '']
+
+###################################
+#---------------------------------#
+# Resources Section
+#---------------------------------#
+###################################          
+Resources:
+  # ---------------------------------
+  # Target Groups
+  # ---------------------------------
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: InternalALB
+    Properties:
+      Name: !Sub alb-tg-${EnvType}-${SystemId}-int-${ServiceNameSuffix}
+      TargetType: ip
+      Protocol: HTTP
+      Port: !Ref ECSContainerPort
+      VpcId: !FindInMap [EnvType, !Ref EnvType, VpcId]
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 10
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: !Ref Stickiness
+        - Key: deregistration_delay.timeout_seconds
+          Value: 110
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+  # ---------------------------------
+  # Elastic Load Balancer
+  # ---------------------------------
+  InternalALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Name: !Sub alb-${EnvType}-${SystemId}-int-${ServiceNameSuffix}
+      Scheme: internal
+      LoadBalancerAttributes:
+        - Key: deletion_protection.enabled
+          Value: false
+        - Key: idle_timeout.timeout_seconds
+          Value: !Ref IdleTimeoutSeconds
+      Subnets: !FindInMap [EnvType, !Ref EnvType, SubnetIds]
+      SecurityGroups: !Ref SecurityGroupIds
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+        - Key: FMSWebACL
+          Value: disabled
+
+  # ---------------------------------
+  # Listener
+  # ---------------------------------
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref InternalALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACM
+
+  # ---------------------------------
+  # ECS Task IAM
+  # ---------------------------------
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: AllowRunningContainer
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter*
+                  - secretsmanager:GetSecretValue
+                  - kms:Decrypt
+                  - s3:GetObject
+                Resource: '*'
+      RoleName: !Sub rol-${EnvType}-${SystemId}-taskexecute-${ServiceNameSuffix}
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      RoleName: !Sub rol-${EnvType}-${SystemId}-task-${ServiceNameSuffix}
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  TaskRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub pol-${EnvType}-${SystemId}-${ServiceNameSuffix}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssmmessages:CreateControlChannel
+              - ssmmessages:CreateDataChannel
+              - ssmmessages:OpenControlChannel
+              - ssmmessages:OpenDataChannel
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - logs:Create*
+              - logs:Describe*
+              - logs:Put*
+            Resource: !GetAtt ECSLogGroup.Arn
+      Roles:
+        - !Ref TaskRole
+
+  # ---------------------------------
+  # ECS TaskDefinition
+  # ---------------------------------
+  # only initial construction
+
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Image: 767398036381.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-pri-t-didcfw-sample-ai-gateway:latest
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub /ecs/ecs-task-${EnvType}-${SystemId}-${ServiceNameSuffix}
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref ServiceNameSuffix
+          Name: !Ref ServiceNameSuffix
+          Memory: !Ref ECSTaskMemory
+          PortMappings:
+            - ContainerPort: !Ref ECSContainerPort
+              HostPort: !Ref ECSContainerPort
+          Environment:
+            - Name: JAVA_OPTS
+              Value: '-XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=70.0'
+      Cpu: !Ref ECSTaskCPUUnit
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      Family: !Sub ecs-task-${EnvType}-${SystemId}-${ServiceNameSuffix}
+      Memory: !Ref ECSTaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+  # ---------------------------------
+  # ECS Cluster
+  # ---------------------------------
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Condition: CreateECSCluster
+    Properties:
+      CapacityProviders:
+        - FARGATE
+      ClusterName: !Sub ecs-cluster-${EnvType}-${SystemId}-${ServiceNameSuffix}
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+      ClusterSettings:
+        - Name : containerInsights
+          Value : !Ref ContainerInsights
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  # ---------------------------------
+  # ECS Service
+  # ---------------------------------
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ECSTaskDefinition
+      - ALBListener
+    Properties:
+      Cluster: 
+        !If
+        - CreateECSCluster
+        - !Ref ECSCluster
+        - !Ref ECSClusterArn
+      DesiredCount: !Ref ECSDesiredCount
+      EnableExecuteCommand: true
+      LoadBalancers:
+        - ContainerName: !Ref ServiceNameSuffix
+          ContainerPort: !Ref ECSContainerPort
+          TargetGroupArn: !Ref ALBTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          SecurityGroups: !Ref SecurityGroupIds
+          Subnets: !FindInMap [EnvType, !Ref EnvType, SubnetIds]
+      ServiceName: !Sub ecs-service-${EnvType}-${SystemId}-${ServiceNameSuffix}
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/ecs-task-${EnvType}-${SystemId}-${ServiceNameSuffix}
+      PropagateTags: SERVICE
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+  # ---------------------------------
+  # CloudWatchLogs
+  # ---------------------------------
+  ECSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId:
+        !If
+        - EncryptionByKMS
+        - !Ref KMSKeyArn
+        - !Ref AWS::NoValue
+      LogGroupName: !Sub /ecs/ecs-task-${EnvType}-${SystemId}-${ServiceNameSuffix}
+      RetentionInDays: !Ref LogsRetentionInDays
+      Tags:
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+
+###################################
+# --------------------------------#
+# Output parameters
+# --------------------------------#
+###################################
+Outputs:
+  InternalALBArn:
+    Value: !Ref InternalALB
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalALBArn
+  InternalALBName:
+    Value: !GetAtt InternalALB.LoadBalancerName
+  ALBTargetGroupArn:
+    Value: !Ref ALBTargetGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-ALBTargetGroupArn
+  ALBTargetGroupName:
+    Value: !GetAtt ALBTargetGroup.TargetGroupName

@@ -1,0 +1,489 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Async-job Infrastracture (based on DC Framework) Construction
+###################################
+# --------------------------------#
+# Metadata
+# --------------------------------#
+###################################
+Metadata:
+  AWS::CloudFormation::Interface:
+    # パラメータの並び順
+    ParameterGroups:
+      - Label:
+          default: "Project Configuration"
+        Parameters:
+          - SystemId
+          - EnvType
+          - BillingID
+          - SecurityGroups
+      - Label:
+          default: "ECSConfiguration"
+        Parameters:
+          - AsyncJobNameSuffix
+          - ECSCapacityProvider
+          - AsyncJobECSTaskCPUUnit
+          - AsyncJobECSTaskMemory
+      - Label:
+          default: Logs Configuration
+        Parameters:
+          - LogsRetentionInDays
+      - Label:
+          default: KMS Configuration
+        Parameters:
+          - KMSKeyArn
+          
+###################################
+#---------------------------------#
+# Mappings Section
+#---------------------------------#
+###################################
+Mappings:
+  EnvType:
+    t:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    k:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    v:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    e:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    i:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    s:
+      EnvDiv: dev
+      VpcId: vpc-0ce3d06582237bf4e
+      SubnetIds: 
+        - subnet-08d7e4edc502d4f3e
+        - subnet-0f45e8713b99a43e5
+        - subnet-0fdd903190ab25f54
+    m:
+      EnvDiv: prd
+      VpcId: vpc-0f45a573cbab26100
+      SubnetIds: 
+        - subnet-03d6798e8fe508470
+        - subnet-09cea85b4f2cfec8e
+        - subnet-0cc5f30d668513fb2
+    p:
+      EnvDiv: prd
+      VpcId: vpc-0f45a573cbab26100
+      SubnetIds: 
+        - subnet-03d6798e8fe508470
+        - subnet-09cea85b4f2cfec8e
+        - subnet-0cc5f30d668513fb2
+
+###################################
+#---------------------------------#
+# Parameters Section
+#---------------------------------#
+###################################            
+Parameters:
+  SystemId:
+    Type: String
+    Description: Enter the system id.
+    MinLength: 6
+    MaxLength: 6
+  EnvType:
+    Type: String
+    Description: Select the EnvType.
+    AllowedValues:
+      - t
+      - k
+      - v
+      - e
+      - i
+      - s
+      - m
+      - p
+  BillingID:
+    Type: String
+    Description: Enter the BillingID.
+    MinLength: 1
+
+  # sercurity groups
+  SecurityGroups:
+    Description: Select the Security Group IDs for resources
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    MinLength: 1
+
+  # async job name
+  AsyncJobNameSuffix:
+    Description: "Enter the async job service name."
+    Type: String
+    Default: async-job
+
+  # async job(ECS)
+  ECSCapacityProvider:
+    Description: "Enter the capacity provider of ecs cluster."
+    AllowedValues: [ "FARGATE_SPOT", "FARGATE" ]
+    Type: String
+    Default: FARGATE_SPOT
+  AsyncJobECSTaskCPUUnit:
+    AllowedValues: [ 256, 512, 1024, 2048, 4096  ]
+    Type: String
+    Default: 1024
+  AsyncJobECSTaskMemory:
+    AllowedValues: [ 1024, 2048, 4096, 8192 ]
+    Type: String
+    Default: 2048
+  
+  # logs
+  LogsRetentionInDays:
+    Description: "Enter the log retention in days"
+    Type: Number
+    Default: 30
+  
+  # kms key
+  KMSKeyArn:
+    Type: String
+    Description: Note! For accounts located in the Security Data OU, please enter the arn of your customer key arn.
+    AllowedPattern: ^(arn:aws:kms:.*:(\d{12})?:(key|alias)/.+|)\Z
+
+###################################
+#---------------------------------#
+# Conditions Section
+#---------------------------------#
+################################### 
+Conditions:
+  EncryptionByKMS: 
+    !Not [!Equals [ !Ref KMSKeyArn, '' ]]
+
+###################################
+#---------------------------------#
+# Resources Section
+#---------------------------------#
+###################################          
+Resources:
+  # ---------------------------------
+  # CloudWatchLogs
+  # ---------------------------------
+  AsyncJobECSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId:
+        !If
+        - EncryptionByKMS
+        - !Ref KMSKeyArn
+        - !Ref AWS::NoValue
+      LogGroupName: !Sub /ecs/ecs-task-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+      RetentionInDays: !Ref LogsRetentionInDays
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  PipesLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId:
+        !If
+        - EncryptionByKMS
+        - !Ref KMSKeyArn
+        - !Ref AWS::NoValue
+      LogGroupName: !Sub /aws/vendedlogs/pipes/ebpipes-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+      RetentionInDays: !Ref LogsRetentionInDays
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+  # ---------------------------------
+  # SQS
+  # ---------------------------------
+  AsyncSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub sqs-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AsyncSQSDLQ.Arn
+        maxReceiveCount: 5
+      KmsMasterKeyId:
+        !If
+        - EncryptionByKMS
+        - !Ref KMSKeyArn
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+  AsyncSQSDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub sqs-${EnvType}-${SystemId}-${AsyncJobNameSuffix}-dlq
+      KmsMasterKeyId:
+        !If
+        - EncryptionByKMS
+        - !Ref KMSKeyArn
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+  
+
+  # ---------------------------------
+  # EventBridgePipes IAM
+  # ---------------------------------
+  AmazonEventBridgePipeExecution:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub rol-${EnvType}-${SystemId}-${AsyncJobNameSuffix}-pipeexecutuion
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: pipes.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECSTasksPipeTarget
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    iam:PassedToService: ecs-tasks.amazonaws.com
+        - PolicyName: SqsPipeSource
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt AsyncSQS.Arn
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  # ---------------------------------
+  # ECS Task IAM
+  # ---------------------------------
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy   
+      Policies:
+        - PolicyName: AllowRunningContainer
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - ssm:GetParameter*
+                  - secretsmanager:GetSecretValue
+                  - kms:Decrypt
+                  - s3:GetObject
+                Resource: '*'
+      RoleName: !Sub rol-${EnvType}-${SystemId}-taskexecute-${AsyncJobNameSuffix}
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  AsyncJobTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AllowRunningContainer
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - ssmmessages:CreateControlChannel
+                  - ssmmessages:CreateDataChannel
+                  - ssmmessages:OpenControlChannel
+                  - ssmmessages:OpenDataChannel
+                  - s3:ListBucket
+                Resource: '*'
+      RoleName: !Sub rol-${EnvType}-${SystemId}-task-${AsyncJobNameSuffix}
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  # ---------------------------------
+  # ECS TaskDefinition
+  # ---------------------------------
+  # only initial construction
+  AsyncJobECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Image: 767398036381.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-pri-t-didcfw-async-job:latest
+          LogConfiguration:
+            LogDriver: awslogs
+            Options: 
+              awslogs-group: !Sub /ecs/ecs-task-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref AsyncJobNameSuffix
+          Name: !Ref AsyncJobNameSuffix
+      Cpu: !Ref AsyncJobECSTaskCPUUnit
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      Family: !Sub ecs-task-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+      Memory: !Ref AsyncJobECSTaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt AsyncJobTaskRole.Arn
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  # ---------------------------------
+  # ECS Cluster
+  # ---------------------------------
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      CapacityProviders:
+        - !Ref ECSCapacityProvider
+      ClusterName: !Sub ecs-cluster-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: !Ref ECSCapacityProvider
+          Weight: 1
+      ClusterSettings:
+        - Name : containerInsights
+          Value : enabled
+      Tags:
+        - Key: SystemId
+          Value: !Ref SystemId
+        - Key: Environment
+          Value: !Ref EnvType
+        - Key: Cost1
+          Value: !Ref SystemId
+        - Key: BillingID
+          Value: !Ref BillingID
+
+  # ---------------------------------
+  # EventBridge Pipes
+  # ---------------------------------
+  AsyncJobPipe:
+    Type: AWS::Pipes::Pipe
+    Properties:
+      Description: processing async job using ecs task
+      Name: !Sub ebpipes-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+      RoleArn: !GetAtt AmazonEventBridgePipeExecution.Arn
+      Source: !GetAtt AsyncSQS.Arn
+      TargetParameters:
+        EcsTaskParameters:
+          TaskDefinitionArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/ecs-task-${EnvType}-${SystemId}-${AsyncJobNameSuffix}
+          TaskCount: 1
+          NetworkConfiguration:
+            AwsvpcConfiguration:
+              Subnets: !FindInMap [ EnvType, !Ref EnvType, SubnetIds ]
+              SecurityGroups: !Ref SecurityGroups
+              AssignPublicIp: DISABLED
+          Overrides:
+            ContainerOverrides:
+              - Name: !Ref AsyncJobNameSuffix
+                Command: 
+                  - python
+                  - ./app.py
+                Environment:
+                  - Name: PAYLOAD
+                    Value: $
+          EnableECSManagedTags: true
+          EnableExecuteCommand: false
+      Target: !GetAtt ECSCluster.Arn
+      LogConfiguration:
+        CloudwatchLogsLogDestination:
+          LogGroupArn: !GetAtt PipesLogGroup.Arn
+        Level: ERROR
+      Tags: {SystemId: !Ref SystemId, Environment: !Ref EnvType, Cost1: !Ref SystemId, BillingID: !Ref BillingID}
